@@ -1,0 +1,10 @@
+#!/bin/sh
+# Git post-commit hook for Codex Desktop Pet
+# 将此脚本复制到任意 Git 仓库的 .git/hooks/post-commit 并赋予执行权限
+# 每次 git commit 成功后，桌宠都会欢呼庆祝！
+
+PET_CLI="d:/Project/MyAnti/pet-cli.py"
+
+if [ -f "$PET_CLI" ]; then
+    python "$PET_CLI" done "Git 提交成功！代码已保存 🎉" --timeout 4 > /dev/null 2>&1 &
+fi
