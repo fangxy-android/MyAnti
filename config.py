@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 DEFAULT_CONFIG = {
-    "character": "dewey",
+    "character": "sakura",
     "scale": 2.0,
     "always_on_top": True,
     "sound_enabled": True,

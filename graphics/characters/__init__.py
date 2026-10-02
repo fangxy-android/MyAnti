@@ -5,8 +5,10 @@ from graphics.characters.fireball import FireballCharacter
 from graphics.characters.codebot import CodeBotCharacter
 from graphics.characters.neko import NekoCharacter
 from graphics.characters.slime import SlimeCharacter
+from graphics.characters.sakura import SakuraCharacter
 
 REGISTRY: dict[str, CharacterBase] = {
+    "sakura": SakuraCharacter(),
     "dewey": DeweyCharacter(),
     "fireball": FireballCharacter(),
     "codebot": CodeBotCharacter(),

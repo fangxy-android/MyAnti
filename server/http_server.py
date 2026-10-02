@@ -17,6 +17,8 @@ class PetRequestHandler(BaseHTTPRequestHandler):
     bridge: PetApiBridge = None
     state_machine = None
 
+    pet_window = None
+
     def _send_json_response(self, status_code: int, data: dict):
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -37,7 +39,7 @@ class PetRequestHandler(BaseHTTPRequestHandler):
         if self.path == "/api/status" or self.path == "/":
             curr_state = self.state_machine.current_state.value if self.state_machine else "idle"
             desc = self.state_machine.state_description if self.state_machine else ""
-            char = cfg.get("character", "dewey")
+            char = self.pet_window.anim_engine.current_character.name if (self.pet_window and hasattr(self.pet_window, "anim_engine")) else cfg.get("character", "sakura")
             self._send_json_response(200, {
                 "status": "ok",
                 "pet": "Codex Desktop Pet",
@@ -115,6 +117,7 @@ class PetHttpServer:
 
         BoundHandler.bridge = self.bridge
         BoundHandler.state_machine = self.state_machine
+        BoundHandler.pet_window = self.pet_window
 
         try:
             self._server = HTTPServer(("127.0.0.1", self.port), BoundHandler)

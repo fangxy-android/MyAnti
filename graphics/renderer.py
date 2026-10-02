@@ -582,3 +582,271 @@ class CrispRenderer:
 
         p.end()
         return pm
+
+    # ==================== SAKURA (二次元动漫少女) ====================
+    @classmethod
+    def render_sakura(cls, state: PetState, frame_idx: int, size: int) -> QPixmap:
+        pm, p = cls.create_canvas(size)
+        s = size / 128.0
+
+        # Animation offsets
+        bob_y = 0.0
+        if state == PetState.IDLE:
+            bob_y = [0, 2, 0, -2][frame_idx % 4] * s
+        elif state == PetState.WORKING:
+            bob_y = [0, -1, 1, 0][frame_idx % 4] * s
+        elif state == PetState.DONE:
+            bob_y = [0, -10, -14, -4][frame_idx % 4] * s
+        elif state == PetState.CLICKED:
+            bob_y = [0, -6, -4, 0][frame_idx % 4] * s
+
+        cx = 64 * s
+        cy = (64 * s) + bob_y
+
+        # 1. Ground Shadow
+        p.setBrush(QColor(0, 0, 0, 30))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(QPointF(cx, 114 * s), 34 * s, 6 * s)
+
+        # 2. Flowing Twin Tails (Back layer)
+        tail_shift = [-4, 0, 4, 1][frame_idx % 4] * s
+        hair_color = QColor("#FF758F")
+        hair_dark = QColor("#E05670")
+        hair_light = QColor("#FFA8BA")
+
+        # Left Twin Tail
+        lt_path = QPainterPath()
+        lt_path.moveTo(cx - 22 * s, cy - 14 * s)
+        lt_path.cubicTo(cx - 44 * s + tail_shift, cy - 6 * s, cx - 46 * s - tail_shift, cy + 24 * s, cx - 32 * s + tail_shift, cy + 38 * s)
+        lt_path.cubicTo(cx - 36 * s + tail_shift, cy + 20 * s, cx - 30 * s, cy + 6 * s, cx - 18 * s, cy - 6 * s)
+        p.setBrush(hair_color)
+        p.setPen(QPen(hair_dark, 1.5 * s))
+        p.drawPath(lt_path)
+
+        # Right Twin Tail
+        rt_path = QPainterPath()
+        rt_path.moveTo(cx + 22 * s, cy - 14 * s)
+        rt_path.cubicTo(cx + 44 * s - tail_shift, cy - 6 * s, cx + 46 * s + tail_shift, cy + 24 * s, cx + 32 * s - tail_shift, cy + 38 * s)
+        rt_path.cubicTo(cx + 36 * s - tail_shift, cy + 20 * s, cx + 30 * s, cy + 6 * s, cx + 18 * s, cy - 6 * s)
+        p.drawPath(rt_path)
+
+        # Hair Ribbons (Red/Crimson)
+        p.setBrush(QColor("#D63031"))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(QPointF(cx - 22 * s, cy - 14 * s), 5 * s, 4 * s)
+        p.drawEllipse(QPointF(cx + 22 * s, cy - 14 * s), 5 * s, 4 * s)
+
+        # 3. Body & Sailor Uniform
+        # Legs / Shoes
+        p.setBrush(QColor("#FFEAA7")) # Fair skin
+        p.drawRoundedRect(QRectF(cx - 10 * s, cy + 34 * s, 7 * s, 12 * s), 3 * s, 3 * s)
+        p.drawRoundedRect(QRectF(cx + 3 * s, cy + 34 * s, 7 * s, 12 * s), 3 * s, 3 * s)
+        # Brown Loafers
+        p.setBrush(QColor("#6D4C41"))
+        p.drawRoundedRect(QRectF(cx - 11 * s, cy + 42 * s, 9 * s, 6 * s), 2.5 * s, 2.5 * s)
+        p.drawRoundedRect(QRectF(cx + 2 * s, cy + 42 * s, 9 * s, 6 * s), 2.5 * s, 2.5 * s)
+
+        # Pleated Skirt (Navy Blue)
+        p.setBrush(QColor("#1E3799"))
+        p.setPen(QPen(QColor("#0C2461"), 1.2 * s))
+        skirt_path = QPainterPath()
+        skirt_path.moveTo(cx - 14 * s, cy + 24 * s)
+        skirt_path.lineTo(cx + 14 * s, cy + 24 * s)
+        skirt_path.lineTo(cx + 18 * s, cy + 35 * s)
+        skirt_path.lineTo(cx - 18 * s, cy + 35 * s)
+        skirt_path.closeSubpath()
+        p.drawPath(skirt_path)
+
+        # White Sailor Blouse & Collar
+        p.setBrush(QColor("#F8FAFC"))
+        p.drawRoundedRect(QRectF(cx - 13 * s, cy + 12 * s, 26 * s, 14 * s), 4 * s, 4 * s)
+        # Navy blue sailor collar
+        p.setBrush(QColor("#1E3799"))
+        p.drawPolygon([QPointF(cx - 12 * s, cy + 12 * s), QPointF(cx, cy + 20 * s), QPointF(cx + 12 * s, cy + 12 * s)])
+        # Red Ribbon Tie
+        p.setBrush(QColor("#FF4757"))
+        p.drawEllipse(QPointF(cx, cy + 17 * s), 3.5 * s, 3 * s)
+
+        # 4. Chibi Anime Head & Face
+        skin_grad = QLinearGradient(cx, cy - 30 * s, cx, cy + 12 * s)
+        skin_grad.setColorAt(0.0, QColor("#FFF4EE"))
+        skin_grad.setColorAt(1.0, QColor("#FFE4D6"))
+        p.setBrush(skin_grad)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(QPointF(cx, cy - 6 * s), 23 * s, 20 * s)
+
+        # 5. Big Jewel-like Anime Eyes
+        eye_y = cy - 6 * s
+        if state in (PetState.DONE, PetState.CLICKED):
+            # Happy closed crescent curve eyes
+            p.setPen(QPen(QColor("#2D3436"), 2.8 * s, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawArc(QRectF(cx - 17 * s, eye_y - 6 * s, 12 * s, 10 * s), 0, 180 * 16)
+            p.drawArc(QRectF(cx + 5 * s, eye_y - 6 * s, 12 * s, 10 * s), 0, 180 * 16)
+            # Happy smiling small open mouth
+            p.setBrush(QColor("#FF6B81"))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.drawChord(QRectF(cx - 4 * s, eye_y + 6 * s, 8 * s, 6 * s), 180 * 16, 180 * 16)
+
+        elif state == PetState.ERROR:
+            # Teary anime eyes
+            p.setPen(QPen(QColor("#2D3436"), 2.5 * s))
+            p.drawLine(QPointF(cx - 15 * s, eye_y - 3 * s), QPointF(cx - 6 * s, eye_y + 3 * s))
+            p.drawLine(QPointF(cx - 6 * s, eye_y - 3 * s), QPointF(cx - 15 * s, eye_y + 3 * s))
+            p.drawLine(QPointF(cx + 6 * s, eye_y - 3 * s), QPointF(cx + 15 * s, eye_y + 3 * s))
+            p.drawLine(QPointF(cx + 15 * s, eye_y - 3 * s), QPointF(cx + 6 * s, eye_y + 3 * s))
+            # Tears streaming
+            p.setBrush(QColor("#54A0FF"))
+            p.drawEllipse(QPointF(cx - 14 * s, eye_y + 7 * s), 3 * s, 4 * s)
+            p.drawEllipse(QPointF(cx + 14 * s, eye_y + 7 * s), 3 * s, 4 * s)
+
+        elif state == PetState.SLEEP or (state == PetState.IDLE and frame_idx == 2):
+            # Cute closed curved sleeping lines
+            p.setPen(QPen(QColor("#2D3436"), 2.2 * s, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawArc(QRectF(cx - 16 * s, eye_y - 2 * s, 10 * s, 6 * s), 0, 180 * 16)
+            p.drawArc(QRectF(cx + 6 * s, eye_y - 2 * s, 10 * s, 6 * s), 0, 180 * 16)
+
+        else:
+            # Gorgeous Jewel Anime Eyes (Violet/Rose Gradient)
+            eye_grad = QLinearGradient(cx, eye_y - 8 * s, cx, eye_y + 8 * s)
+            eye_grad.setColorAt(0.0, QColor("#6C5CE7"))
+            eye_grad.setColorAt(0.6, QColor("#A29BFE"))
+            eye_grad.setColorAt(1.0, QColor("#FD79A8"))
+
+            p.setBrush(eye_grad)
+            p.setPen(QPen(QColor("#2D3436"), 1.8 * s)) # Upper lash line
+            p.drawEllipse(QPointF(cx - 11 * s, eye_y), 5.5 * s, 7.5 * s)
+            p.drawEllipse(QPointF(cx + 11 * s, eye_y), 5.5 * s, 7.5 * s)
+
+            # Eyelash flickers
+            p.setPen(QPen(QColor("#2D3436"), 2 * s))
+            p.drawLine(QPointF(cx - 16 * s, eye_y - 5 * s), QPointF(cx - 18 * s, eye_y - 7 * s))
+            p.drawLine(QPointF(cx + 16 * s, eye_y - 5 * s), QPointF(cx + 18 * s, eye_y - 7 * s))
+
+            # Sparkle Highlights (Large white circle + small star sparkle)
+            p.setBrush(QColor("#FFFFFF"))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.drawEllipse(QPointF(cx - 12 * s, eye_y - 3 * s), 2.6 * s, 3.2 * s)
+            p.drawEllipse(QPointF(cx + 10 * s, eye_y - 3 * s), 2.6 * s, 3.2 * s)
+            p.drawEllipse(QPointF(cx - 9 * s, eye_y + 3 * s), 1.5 * s, 1.5 * s)
+            p.drawEllipse(QPointF(cx + 13 * s, eye_y + 3 * s), 1.5 * s, 1.5 * s)
+
+            # Tiny cute mouth
+            p.setPen(QPen(QColor("#FF7675"), 1.5 * s))
+            p.drawArc(QRectF(cx - 2.5 * s, eye_y + 5 * s, 5 * s, 3 * s), 180 * 16, 180 * 16)
+
+        # 6. Rosy Anime Blush Cheeks
+        p.setBrush(QColor(255, 118, 117, 140))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(QPointF(cx - 15 * s, eye_y + 4 * s), 4.5 * s, 2.5 * s)
+        p.drawEllipse(QPointF(cx + 15 * s, eye_y + 4 * s), 4.5 * s, 2.5 * s)
+
+        # 7. Front Anime Bangs (前刘海 + 呆毛)
+        bangs_path = QPainterPath()
+        bangs_path.moveTo(cx - 24 * s, cy - 14 * s)
+        bangs_path.quadTo(cx - 16 * s, cy - 8 * s, cx - 12 * s, cy - 2 * s)
+        bangs_path.quadTo(cx - 8 * s, cy - 10 * s, cx - 4 * s, cy - 3 * s)
+        bangs_path.quadTo(cx, cy - 12 * s, cx + 4 * s, cy - 3 * s)
+        bangs_path.quadTo(cx + 8 * s, cy - 10 * s, cx + 12 * s, cy - 2 * s)
+        bangs_path.quadTo(cx + 16 * s, cy - 8 * s, cx + 24 * s, cy - 14 * s)
+        bangs_path.cubicTo(cx + 20 * s, cy - 32 * s, cx - 20 * s, cy - 32 * s, cx - 24 * s, cy - 14 * s)
+
+        p.setBrush(hair_color)
+        p.setPen(QPen(hair_dark, 1.5 * s))
+        p.drawPath(bangs_path)
+
+        # Anime Hair Shine Band (天使之环高光)
+        p.setPen(QPen(QColor(255, 255, 255, 160), 2.2 * s, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        p.drawLine(QPointF(cx - 14 * s, cy - 18 * s), QPointF(cx + 14 * s, cy - 18 * s))
+
+        # Cute Ahoge (呆毛 - bouncy)
+        ahoge_shift = [2, 0, -2, 1][frame_idx % 4] * s
+        ahoge = QPainterPath()
+        ahoge.moveTo(cx, cy - 26 * s)
+        ahoge.cubicTo(cx + 8 * s + ahoge_shift, cy - 38 * s, cx - 6 * s + ahoge_shift, cy - 44 * s, cx + 4 * s + ahoge_shift, cy - 48 * s)
+        p.setPen(QPen(hair_dark, 2 * s, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawPath(ahoge)
+
+        # 8. State-specific props & animations
+        # A. Working: Pink Cute Laptop + Fast Typing Paws + Sakura Code Petals
+        if state == PetState.WORKING:
+            # Cute Cyber Pink Laptop
+            p.setBrush(QColor("#FF758F"))
+            p.setPen(QPen(QColor("#C0392B"), 1.2 * s))
+            p.drawRoundedRect(QRectF(cx + 10 * s, cy + 10 * s, 5 * s, 22 * s), 2 * s, 2 * s)
+            # Glowing screen
+            p.setBrush(QColor("#00F0FF"))
+            p.drawRect(QRectF(cx + 13 * s, cy + 12 * s, 2 * s, 18 * s))
+            # Laptop base
+            p.setBrush(QColor("#E2E8F0"))
+            p.drawRoundedRect(QRectF(cx + 4 * s, cy + 28 * s, 24 * s, 5 * s), 2 * s, 2 * s)
+
+            # Tiny hands typing
+            p.setBrush(QColor("#FFEAA7"))
+            h_alt = (frame_idx % 2) * 3 * s
+            p.drawEllipse(QPointF(cx + 6 * s, cy + 24 * s - h_alt), 4 * s, 4 * s)
+            p.drawEllipse(QPointF(cx + 14 * s, cy + 24 * s + h_alt), 4 * s, 4 * s)
+
+            # Floating Sakura Petals & Code Symbols
+            p.setFont(QFont("Segoe UI Emoji", int(11 * s)))
+            p.setPen(QColor("#FF758F"))
+            petals = [
+                ("🌸", cx + 22 * s, cy - 8 * s),
+                ("</>", cx + 28 * s, cy - 18 * s),
+                ("✨", cx + 18 * s, cy - 24 * s),
+                ("{ }", cx + 30 * s, cy - 10 * s)
+            ]
+            tag, tx, ty = petals[frame_idx % 4]
+            p.drawText(QPointF(tx, ty), tag)
+
+        # B. Done: Double Peace Signs (✌️ ✌️) & Celebration Sakura Shower
+        elif state == PetState.DONE:
+            # Peace sign hands up!
+            p.setFont(QFont("Segoe UI Emoji", int(14 * s)))
+            p.drawText(QPointF(cx - 28 * s, cy + 6 * s), "✌️")
+            p.drawText(QPointF(cx + 18 * s, cy + 6 * s), "✌️")
+            # Celebration sparkles & flowers
+            p.drawText(QPointF(cx - 28 * s, cy - 26 * s), "🌸")
+            p.drawText(QPointF(cx + 22 * s, cy - 28 * s), "✨")
+            p.drawText(QPointF(cx, cy - 46 * s), "🎉")
+
+        # C. Thinking: Hand on chin & cute thinking bubble
+        elif state == PetState.THINKING:
+            p.setBrush(QColor("#FFEAA7"))
+            p.drawEllipse(QPointF(cx + 6 * s, cy + 2 * s), 4 * s, 4 * s)
+            # Question mark
+            p.setFont(QFont("Segoe UI", int(14 * s), QFont.Weight.Bold))
+            p.setPen(QColor("#FF7675"))
+            p.drawText(QPointF(cx + 20 * s, cy - 26 * s), "❓")
+
+        # D. Error: Rainy cloud
+        elif state == PetState.ERROR:
+            p.setFont(QFont("Segoe UI Emoji", int(16 * s)))
+            p.drawText(QPointF(cx - 10 * s, cy - 42 * s), "🌧️")
+
+        # E. Clicked: Heart explosions
+        elif state == PetState.CLICKED:
+            p.setFont(QFont("Segoe UI Emoji", int(14 * s)))
+            p.setPen(QColor("#E84393"))
+            p.drawText(QPointF(cx + 18 * s, cy - 22 * s - (frame_idx * 4 * s)), "💖")
+            p.drawText(QPointF(cx - 26 * s, cy - 18 * s - (frame_idx * 4 * s)), "💕")
+
+        # F. Sleep: Cat plushie & Zzz
+        elif state == PetState.SLEEP:
+            # Little cat plushie in arms
+            p.setBrush(QColor("#FFFFFF"))
+            p.setPen(QPen(QColor("#CBD5E1"), 1.2 * s))
+            p.drawEllipse(QPointF(cx, cy + 18 * s), 10 * s, 8 * s)
+            p.setBrush(QColor("#FF7675"))
+            p.drawEllipse(QPointF(cx, cy + 18 * s), 2 * s, 1.5 * s) # Nose
+            # Floating Zzz
+            p.setFont(QFont("Segoe UI", int(13 * s), QFont.Weight.Bold))
+            p.setPen(QColor("#FD79A8"))
+            zy = cy - 14 * s - (frame_idx * 4 * s)
+            p.drawText(QPointF(cx + 18 * s, zy), "Z")
+            p.drawText(QPointF(cx + 26 * s, zy - 8 * s), "z")
+
+        p.end()
+        return pm

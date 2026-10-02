@@ -210,7 +210,8 @@ class QuickBar(QWidget):
         char_row = QHBoxLayout()
         char_row.setSpacing(6)
         char_emojis = {
-            "dewey": "🦆 整理鸭",
+            "sakura": "🌸 樱子",
+            "dewey": "🦆 鸭鸭",
             "fireball": "🔥 火焰",
             "codebot": "🤖 机人",
             "neko": "🐱 猫猫",

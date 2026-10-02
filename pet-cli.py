@@ -95,7 +95,17 @@ def main():
     elif state == "waiting":
         mood = "warning"
 
-    timeout = 5.0 if state in ("done", "error", "working", "thinking", "waiting") else None
+    # State specific timeouts:
+    # working stays active (300s) until explicitly completed with done or idle
+    default_timeouts = {
+        "working": 300.0,
+        "thinking": 120.0,
+        "done": 15.0,
+        "error": 20.0,
+        "waiting": 60.0,
+        "clicked": 3.0
+    }
+    timeout = default_timeouts.get(state, None)
 
     # Check for custom --timeout
     if "--timeout" in sys.argv:

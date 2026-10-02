@@ -2,16 +2,17 @@
 from PySide6.QtCore import QObject, Signal, QTimer
 from PySide6.QtGui import QPixmap
 from engine.pet_state import PetState, StateMachine
-from graphics.characters import get_character, CharacterBase
+from graphics.characters.base import CharacterBase
 from config import cfg
 
 class AnimationEngine(QObject):
     frame_changed = Signal(QPixmap)
 
     def __init__(self, state_machine: StateMachine):
+        from graphics.characters import get_character
         super().__init__()
         self.state_machine = state_machine
-        self.current_character: CharacterBase = get_character(cfg.get("character", "dewey"))
+        self.current_character: CharacterBase = get_character(cfg.get("character", "sakura"))
         self.scale = float(cfg.get("scale", 2.0))
 
         self.current_frames: list[QPixmap] = []
