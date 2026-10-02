@@ -117,6 +117,9 @@ def run_tests():
         assert res.get("action") == "wake"
 
     server.stop()
+    cfg.set("character", "sakura")
+    cfg.set("window_x", 1800)
+    cfg.set("window_y", 900)
     print("✅ UI, Tray, QuickBar, and Server tests passed.")
 
     print("\n🎉 ALL TESTS PASSED SUCCESSFULLY! Ready for launch.")

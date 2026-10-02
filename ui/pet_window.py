@@ -32,7 +32,7 @@ class PetWindow(QWidget):
         self.state_machine.register_listener(self._on_state_changed)
 
     def _init_window(self):
-        flags = Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool | Qt.WindowType.SubWindow
+        flags = Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool
         if cfg.get("always_on_top", True):
             flags |= Qt.WindowType.WindowStaysOnTopHint
 

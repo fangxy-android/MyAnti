@@ -2,7 +2,7 @@
 import json
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Qt
 
 from engine.pet_state import PetState
 from config import cfg
@@ -101,18 +101,19 @@ class PetRequestHandler(BaseHTTPRequestHandler):
         # Suppress noisy default http logging
         pass
 
-class PetHttpServer:
-    def __init__(self, state_machine, pet_window, port: int = None):
+class PetHttpServer(QObject):
+    def __init__(self, state_machine, pet_window, port: int = None, parent=None):
+        super().__init__(parent)
         self.state_machine = state_machine
         self.pet_window = pet_window
         self.port = port or int(cfg.get("server_port", 8765))
         self.bridge = PetApiBridge()
 
-        # Connect bridge signals to GUI thread actions
-        self.bridge.state_requested.connect(self._on_state_requested)
-        self.bridge.say_requested.connect(self._on_say_requested)
-        self.bridge.character_requested.connect(self._on_character_requested)
-        self.bridge.action_requested.connect(self._on_action_requested)
+        # Connect bridge signals to GUI thread actions safely via QueuedConnection
+        self.bridge.state_requested.connect(self._on_state_requested, Qt.ConnectionType.QueuedConnection)
+        self.bridge.say_requested.connect(self._on_say_requested, Qt.ConnectionType.QueuedConnection)
+        self.bridge.character_requested.connect(self._on_character_requested, Qt.ConnectionType.QueuedConnection)
+        self.bridge.action_requested.connect(self._on_action_requested, Qt.ConnectionType.QueuedConnection)
 
         self._server = None
         self._thread = None
