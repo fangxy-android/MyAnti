@@ -3,9 +3,24 @@ import sys
 import os
 from pathlib import Path
 
+import traceback
+
 if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
-    sys.stderr.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+    sys.stderr.reconfigure(encoding="utf-8", line_buffering=True)
+
+def exception_hook(exctype, value, tb):
+    print("UNCAUGHT EXCEPTION:", exctype, value, file=sys.stderr)
+    traceback.print_exception(exctype, value, tb)
+    try:
+        crash_file = Path(__file__).resolve().parent / "crash.log"
+        with open(crash_file, "a", encoding="utf-8") as f:
+            traceback.print_exception(exctype, value, tb, file=f)
+    except Exception:
+        pass
+    sys.__excepthook__(exctype, value, tb)
+
+sys.excepthook = exception_hook
 
 # Add project root to sys.path
 BASE_DIR = Path(__file__).resolve().parent
@@ -51,6 +66,17 @@ def main():
     if cfg.get("server_enabled", True) and check_existing_instance(port):
         print(f"🐾 Codex Desktop Pet 已在运行中 (端口 {port})，已唤醒已有桌宠控制台。")
         sys.exit(0)
+
+    # Attach to interactive desktop on Windows
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            hDesk = user32.OpenDesktopW("Default", 0, False, 0x01FF)
+            if hDesk:
+                user32.SetThreadDesktop(hDesk)
+        except Exception:
+            pass
 
     # Enable High DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(

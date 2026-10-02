@@ -30,6 +30,8 @@ class PetWindow(QWidget):
         # Connect animation updates
         self.anim_engine.frame_changed.connect(self._on_frame_changed)
         self.state_machine.register_listener(self._on_state_changed)
+        if hasattr(self.anim_engine, "current_frames") and self.anim_engine.current_frames:
+            self.current_pixmap = self.anim_engine.current_frames[self.anim_engine.frame_index]
 
     def _init_window(self):
         flags = Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool
