@@ -399,6 +399,9 @@ class CrispRenderer:
         elif state == PetState.CLICKED:
             p.setPen(QColor("#E84393"))
             p.drawText(screen_rect, Qt.AlignmentFlag.AlignCenter, "♥ _ ♥")
+        elif state == PetState.WAITING:
+            p.setPen(QColor("#F39C12"))
+            p.drawText(screen_rect, Qt.AlignmentFlag.AlignCenter, "? _ ?" if frame_idx % 2 == 0 else "! _ !")
         elif state == PetState.SLEEP:
             p.setPen(QColor("#64748B"))
             p.drawText(screen_rect, Qt.AlignmentFlag.AlignCenter, "- _ -")

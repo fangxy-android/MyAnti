@@ -39,7 +39,7 @@ class PetRequestHandler(BaseHTTPRequestHandler):
         if self.path == "/api/status" or self.path == "/":
             curr_state = self.state_machine.current_state.value if self.state_machine else "idle"
             desc = self.state_machine.state_description if self.state_machine else ""
-            char = self.pet_window.anim_engine.current_character.name if (self.pet_window and hasattr(self.pet_window, "anim_engine")) else cfg.get("character", "sakura")
+            char = self.pet_window.anim_engine.current_character.name if (self.pet_window and hasattr(self.pet_window, "anim_engine")) else cfg.get("character", "codebot")
             self._send_json_response(200, {
                 "status": "ok",
                 "pet": "Codex Desktop Pet",
@@ -77,7 +77,7 @@ class PetRequestHandler(BaseHTTPRequestHandler):
             self._send_json_response(200, {"success": True, "message": message})
 
         elif self.path == "/api/character":
-            char_name = payload.get("character", payload.get("name", "sakura"))
+            char_name = payload.get("character", payload.get("name", "codebot"))
             from graphics.characters import get_character
             resolved_char = get_character(char_name)
             if self.bridge:

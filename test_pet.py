@@ -93,8 +93,8 @@ def run_tests():
     # Test QuickBar UI updates
     pw.quick_bar.update_state_ui(PetState.WORKING)
     assert pw.quick_bar.status_chip.text() == "● 编码中"
-    pw.quick_bar.update_character_ui("dewey")
-    assert "Dewey" in pw.quick_bar.char_tag.text()
+    pw.quick_bar.update_character_ui("codebot")
+    assert "CodeBot" in pw.quick_bar.char_tag.text()
 
     tray = TrayIcon(pw)
     assert tray is not None
@@ -105,10 +105,10 @@ def run_tests():
     import urllib.request
     import json
     # Test character switch over HTTP
-    req = urllib.request.Request("http://127.0.0.1:8769/api/character", data=b'{"character":"neko"}', headers={"Content-Type": "application/json"})
+    req = urllib.request.Request("http://127.0.0.1:8769/api/character", data=b'{"character":"codebot"}', headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=2.0) as resp:
         res = json.loads(resp.read().decode())
-        assert res.get("character") == "neko"
+        assert res.get("character") == "codebot"
 
     # Test action over HTTP
     req = urllib.request.Request("http://127.0.0.1:8769/api/action", data=b'{"action":"wake"}', headers={"Content-Type": "application/json"})
@@ -117,7 +117,7 @@ def run_tests():
         assert res.get("action") == "wake"
 
     server.stop()
-    cfg.set("character", "sakura")
+    cfg.set("character", "codebot")
     cfg.set("window_x", 1800)
     cfg.set("window_y", 900)
     print("✅ UI, Tray, QuickBar, and Server tests passed.")

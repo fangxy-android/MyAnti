@@ -65,6 +65,7 @@ class PetWindow(QWidget):
         self.quick_bar.wake_requested.connect(self._wake_pet)
         self.quick_bar.sleep_requested.connect(self._sleep_pet)
         self.quick_bar.interaction_requested.connect(self._handle_pet_click)
+        self.quick_bar.top_toggled.connect(self._set_top)
 
     def _restore_position(self):
         screen = QGuiApplication.primaryScreen().availableGeometry()
@@ -87,7 +88,7 @@ class PetWindow(QWidget):
         cfg.set("window_y", default_y)
         self.pill.follow_pet(self.pos(), self.width(), self.height())
         if announce:
-            self.say("已重置到屏幕右下角~ 🌸", "info", 2.5)
+            self.say("已重置到屏幕右下角~ 🤖", "info", 2.5)
 
     def _wake_pet(self):
         self.state_machine.set_state(PetState.IDLE)
@@ -252,15 +253,6 @@ class PetWindow(QWidget):
 
         menu.addSeparator()
 
-        # Character sub-menu
-        char_menu = menu.addMenu("🐾 切换形象")
-        current_char_id = self.anim_engine.current_character.name
-        for char_info in list_characters():
-            act = char_menu.addAction(char_info["display_name"])
-            act.setCheckable(True)
-            act.setChecked(char_info["id"] == current_char_id)
-            act.triggered.connect(lambda checked, name=char_info["id"]: self._on_character_changed(name, announce=True))
-
         # State test sub-menu
         state_menu = menu.addMenu("⚡ 状态测试")
         states = [
@@ -320,7 +312,9 @@ class PetWindow(QWidget):
 
     def _toggle_top(self):
         curr = cfg.get("always_on_top", True)
-        new_val = not curr
+        self._set_top(not curr)
+
+    def _set_top(self, new_val: bool):
         cfg.set("always_on_top", new_val)
         flags = self.windowFlags()
         if new_val:

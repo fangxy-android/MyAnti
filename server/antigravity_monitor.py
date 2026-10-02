@@ -116,11 +116,11 @@ class AntigravityMonitor(QObject):
             # Clean lines
             user_text = " ".join(user_text.split())
             if len(user_text) > 22:
-                say_text = f"收到指令: {user_text[:20]}... 🌸"
+                say_text = f"收到指令: {user_text[:20]}... 🤖"
             elif user_text:
-                say_text = f"收到指令: {user_text} 🌸"
+                say_text = f"收到指令: {user_text} 🤖"
             else:
-                say_text = "收到主人指令！正在思考中~ 🌸"
+                say_text = "收到指令！指令分析处理中... 🤖"
 
             self._apply_state(PetState.WORKING, say_text, timeout=300.0, mood="working")
             return
@@ -134,7 +134,7 @@ class AntigravityMonitor(QObject):
             if tname == "ask_question":
                 self._apply_state(
                     PetState.WAITING,
-                    "主人，有需要您确认的选项哦~ ❓",
+                    "等待确认: 有需要您选择的项目 ❓",
                     timeout=300.0,
                     mood="info"
                 )
@@ -167,7 +167,7 @@ class AntigravityMonitor(QObject):
         if source == "MODEL" and typ == "PLANNER_RESPONSE" and not tool_calls and content:
             self._apply_state(
                 PetState.DONE,
-                "任务完成啦！主人请查看~ (✌️ ✌️) 🌸",
+                "任务完成！请查看结果 (✓) 🤖",
                 timeout=12.0,
                 mood="success"
             )

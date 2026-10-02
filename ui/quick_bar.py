@@ -22,6 +22,8 @@ class QuickBar(QWidget):
     scale_changed = Signal(float)
     say_requested = Signal(str, str)
     status_pill_toggled = Signal(bool)
+    top_toggled = Signal(bool)
+    sound_toggled = Signal(bool)
     reset_position_requested = Signal()
     wake_requested = Signal()
     sleep_requested = Signal()
@@ -36,8 +38,7 @@ class QuickBar(QWidget):
         self._init_window()
         self._init_ui()
         self.state_machine.register_listener(self._on_state_updated)
-        self.update_character_ui(cfg.get("character", "sakura"))
-        self.update_state_ui(self.state_machine.current_state)
+        self.refresh_all_ui()
 
     def _init_window(self):
         self.setWindowFlags(
@@ -46,7 +47,7 @@ class QuickBar(QWidget):
             Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(430, 600)
+        self.setFixedSize(430, 520)
 
     def _init_ui(self):
         main_layout = QVBoxLayout(self)
@@ -104,7 +105,7 @@ class QuickBar(QWidget):
         # 1. Header: Title + Close Button
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
-        title = QLabel("✨ Codex Pet 控制台")
+        title = QLabel("🤖 CodeBot 开发者控制台")
         title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         title.setStyleSheet("color: #00F0FF; font-weight: bold;")
 
@@ -147,7 +148,7 @@ class QuickBar(QWidget):
         status_box_layout.setSpacing(4)
 
         row1 = QHBoxLayout()
-        self.char_tag = QLabel(f"🐾 当前: {cfg.get('character', 'sakura').capitalize()}")
+        self.char_tag = QLabel("🤖 形象: 赛博机人 CodeBot")
         self.char_tag.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         self.char_tag.setStyleSheet("color: #38BDF8;")
 
@@ -207,7 +208,7 @@ class QuickBar(QWidget):
                     color: #F8FAFC;
                     font-size: 11px;
                     font-weight: 600;
-                    padding: 4px 6px;
+                    padding: 3px 6px;
                     border: 1px solid #334155;
                     border-radius: 6px;
                 }}
@@ -225,51 +226,7 @@ class QuickBar(QWidget):
 
         card_layout.addLayout(state_grid)
 
-        # 4. Character Switcher (2 rows x 3 columns for spacious layout)
-        char_label = QLabel("🐾 切换桌宠形象")
-        char_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        char_label.setStyleSheet("color: #E2E8F0;")
-        card_layout.addWidget(char_label)
-
-        char_grid = QGridLayout()
-        char_grid.setSpacing(6)
-        char_emojis = {
-            "sakura": "🌸 樱子",
-            "dewey": "🦆 鸭鸭",
-            "fireball": "🔥 火焰",
-            "codebot": "🤖 机人",
-            "neko": "🐱 猫猫",
-            "slime": "🍮 史莱姆"
-        }
-        for idx, char_info in enumerate(list_characters()):
-            cid = char_info["id"]
-            name = char_emojis.get(cid, cid)
-            btn = QPushButton(name)
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setFixedHeight(28)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #1E293B;
-                    color: #CBD5E1;
-                    font-size: 11px;
-                    font-weight: bold;
-                    padding: 4px;
-                    border: 1px solid #334155;
-                    border-radius: 6px;
-                }
-                QPushButton:hover {
-                    border-color: #00F0FF;
-                    color: #FFFFFF;
-                }
-            """)
-            btn.clicked.connect(lambda checked, name=cid: self._switch_character(name))
-            self._char_buttons[cid] = btn
-            r = idx // 3
-            c = idx % 3
-            char_grid.addWidget(btn, r, c)
-        card_layout.addLayout(char_grid)
-
-        # 5. Quick Real Actions (Real interactions instead of fake presets)
+        # 4. Quick Real Actions (Real interactions instead of fake presets)
         action_label = QLabel("🎮 快捷控制")
         action_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         action_label.setStyleSheet("color: #E2E8F0;")
@@ -393,42 +350,16 @@ class QuickBar(QWidget):
         self.state_machine.set_state(state, timeout_sec=timeout)
 
     def _switch_character(self, name: str):
-        sound_player.play("click")
-        self.character_changed.emit(name)
-        self.update_character_ui(name)
+        pass
 
-    def update_character_ui(self, name: str):
+    def refresh_all_ui(self):
+        self.update_state_ui(self.state_machine.current_state)
+        self.update_character_ui(cfg.get("character", "codebot"))
+
+    def update_character_ui(self, name: str = "codebot"):
         char = get_character(name)
-        self.char_tag.setText(f"🐾 当前: {char.display_name}")
-        for cid, btn in self._char_buttons.items():
-            if cid == char.name:
-                btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #0F766E;
-                        border: 1.5px solid #00F0FF;
-                        color: #FFFFFF;
-                        font-size: 11px;
-                        font-weight: bold;
-                        border-radius: 6px;
-                        padding: 4px;
-                    }
-                """)
-            else:
-                btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #1E293B;
-                        border: 1px solid #334155;
-                        color: #94A3B8;
-                        font-size: 11px;
-                        font-weight: bold;
-                        border-radius: 6px;
-                        padding: 4px;
-                    }
-                    QPushButton:hover {
-                        border-color: #00F0FF;
-                        color: #FFFFFF;
-                    }
-                """)
+        self.char_tag.setText(f"🤖 形象: {char.display_name}")
+
 
     def update_state_ui(self, new_state: PetState):
         info = {
@@ -526,6 +457,7 @@ class QuickBar(QWidget):
         new_val = not curr
         cfg.set("always_on_top", new_val)
         btn.setText("📌 置顶: 开" if new_val else "置顶: 关")
+        self.top_toggled.emit(new_val)
 
     def _on_state_updated(self, old_state: PetState, new_state: PetState):
         self.update_state_ui(new_state)

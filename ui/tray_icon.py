@@ -71,24 +71,6 @@ class TrayIcon(QSystemTrayIcon):
 
         menu.addSeparator()
 
-        # Character sub-menu
-        char_menu = menu.addMenu("🐾 切换形象")
-        self._char_actions = {}
-        for char_info in list_characters():
-            act = char_menu.addAction(char_info["display_name"])
-            act.setCheckable(True)
-            act.triggered.connect(lambda checked, name=char_info["id"]: self.pet_window._on_character_changed(name, announce=True))
-            self._char_actions[char_info["id"]] = act
-
-        def _update_char_checks():
-            current_id = self.pet_window.anim_engine.current_character.name
-            for cid, act in self._char_actions.items():
-                act.setChecked(cid == current_id)
-
-        char_menu.aboutToShow.connect(_update_char_checks)
-
-        menu.addSeparator()
-
         # Exit
         exit_act = menu.addAction("✕ 退出桌宠")
         exit_act.triggered.connect(QGuiApplication.instance().quit)

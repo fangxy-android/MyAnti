@@ -116,15 +116,14 @@ def main():
 
     # Welcome greeting after UI renders
     def on_ready():
-        char_name = cfg.get("character", "sakura")
         sound_player.play("notify")
-        pet_window.say("✨ Codex 桌宠就绪！点击互动，双击打开控制台~", "info", 4.5)
+        pet_window.say("🤖 CodeBot 赛博机人就绪！点击互动，双击打开控制台~", "info", 4.5)
 
     QTimer.singleShot(600, on_ready)
 
     print("=" * 60)
-    print("🐾 Codex Desktop Pet 已启动！")
-    print(f"📌 当前形象: {cfg.get('character', 'dewey')}")
+    print("🤖 CodeBot Desktop Pet 已启动！")
+    print(f"📌 当前形象: {cfg.get('character', 'codebot')}")
     print(f"🌐 外部控制 API: http://127.0.0.1:{cfg.get('server_port', 8765)}")
     print(f"💡 命令行测试: python pet-cli.py working \"正在编译...\"")
     print("=" * 60)

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 DEFAULT_CONFIG = {
-    "character": "sakura",
+    "character": "codebot",
     "scale": 2.0,
     "always_on_top": True,
     "sound_enabled": True,
@@ -17,7 +17,7 @@ DEFAULT_CONFIG = {
     "snap_to_bottom": False,
     "auto_sleep_minutes": 5,
     "theme": "dark",
-    "monitor_system": True,
+    "monitor_system": False,
     "custom_skins_dir": ""
 }
 
