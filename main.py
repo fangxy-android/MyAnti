@@ -25,9 +25,33 @@ from ui.tray_icon import TrayIcon
 from server.http_server import PetHttpServer
 from server.monitor import SystemMonitor
 from server.antigravity_monitor import AntigravityMonitor
+import urllib.request
+import urllib.error
+
+
+def check_existing_instance(port: int = 8765) -> bool:
+    try:
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/api/status", headers={"User-Agent": "codex-pet-checker"})
+        with urllib.request.urlopen(req, timeout=0.8) as resp:
+            if resp.status == 200:
+                wake_req = urllib.request.Request(
+                    f"http://127.0.0.1:{port}/api/action",
+                    data=b'{"action":"quick_bar"}',
+                    headers={"Content-Type": "application/json"}
+                )
+                urllib.request.urlopen(wake_req, timeout=1.0)
+                return True
+    except Exception:
+        pass
+    return False
 
 
 def main():
+    port = int(cfg.get("server_port", 8765))
+    if cfg.get("server_enabled", True) and check_existing_instance(port):
+        print(f"🐾 Codex Desktop Pet 已在运行中 (端口 {port})，已唤醒已有桌宠控制台。")
+        sys.exit(0)
+
     # Enable High DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough

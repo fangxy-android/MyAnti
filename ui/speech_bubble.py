@@ -1,7 +1,7 @@
 """High-definition floating comic Speech Bubble with crisp typography and status tags."""
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QFrame, QGraphicsDropShadowEffect
 from PySide6.QtCore import Qt, QPoint, QTimer, QRectF
-from PySide6.QtGui import QPainter, QColor, QPainterPath, QFont, QPen
+from PySide6.QtGui import QPainter, QColor, QPainterPath, QFont, QPen, QGuiApplication
 from config import cfg
 
 class SpeechBubble(QWidget):
@@ -113,8 +113,12 @@ class SpeechBubble(QWidget):
         self.adjustSize()
 
         if target_pos:
+            screen = QGuiApplication.primaryScreen().availableGeometry()
             bx = target_pos.x() - self.width() // 2
-            by = target_pos.y() - self.height() - 4
+            by = target_pos.y() - self.height() - 6
+            if by < screen.top() + 10:
+                by = target_pos.y() + 140
+            bx = max(screen.left() + 10, min(bx, screen.right() - self.width() - 10))
             self.move(bx, by)
 
         self.show()

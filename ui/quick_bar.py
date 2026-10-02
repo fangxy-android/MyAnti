@@ -22,22 +22,22 @@ class QuickBar(QWidget):
     scale_changed = Signal(float)
     say_requested = Signal(str, str)
     status_pill_toggled = Signal(bool)
+    reset_position_requested = Signal()
+    wake_requested = Signal()
+    sleep_requested = Signal()
+    interaction_requested = Signal()
 
     def __init__(self, state_machine: StateMachine, parent=None):
         super().__init__(parent)
         self.state_machine = state_machine
-        self.pomodoro_timer = QTimer(self)
-        self.pomodoro_timer.timeout.connect(self._on_pomodoro_tick)
-        self.pomodoro_seconds_left = 0
-        self.pomodoro_total_seconds = 25 * 60
-        self.pomodoro_active = False
-
         self._state_buttons = {}
         self._char_buttons = {}
 
         self._init_window()
         self._init_ui()
         self.state_machine.register_listener(self._on_state_updated)
+        self.update_character_ui(cfg.get("character", "sakura"))
+        self.update_state_ui(self.state_machine.current_state)
 
     def _init_window(self):
         self.setWindowFlags(
@@ -46,19 +46,19 @@ class QuickBar(QWidget):
             Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(400, 600)
+        self.setFixedSize(430, 600)
 
     def _init_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setContentsMargins(8, 8, 8, 8)
 
         # Container Card with Frosted Dark Glassmorphism
         card = QFrame(self)
         card.setObjectName("mainCard")
         card.setStyleSheet("""
             QFrame#mainCard {
-                background-color: rgba(15, 23, 42, 0.97);
-                border: 1.5px solid rgba(0, 240, 255, 0.5);
+                background-color: rgba(15, 23, 42, 0.98);
+                border: 1.5px solid rgba(0, 240, 255, 0.55);
                 border-radius: 16px;
             }
             QLabel {
@@ -70,9 +70,9 @@ class QuickBar(QWidget):
                 color: #E2E8F0;
                 border: 1px solid #334155;
                 border-radius: 8px;
-                padding: 6px 12px;
+                padding: 6px 10px;
                 font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-                font-size: 12px;
+                font-size: 11px;
                 font-weight: 500;
             }
             QPushButton:hover {
@@ -88,8 +88,8 @@ class QuickBar(QWidget):
                 border: 1px solid #334155;
                 border-radius: 8px;
                 color: #FFFFFF;
-                padding: 8px 12px;
-                font-size: 13px;
+                padding: 7px 10px;
+                font-size: 12px;
                 font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
             }
             QLineEdit:focus {
@@ -98,29 +98,31 @@ class QuickBar(QWidget):
         """)
 
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(18, 16, 18, 16)
-        card_layout.setSpacing(12)
+        card_layout.setContentsMargins(16, 14, 16, 14)
+        card_layout.setSpacing(10)
 
         # 1. Header: Title + Close Button
         header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
         title = QLabel("✨ Codex Pet 控制台")
         title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         title.setStyleSheet("color: #00F0FF; font-weight: bold;")
 
         close_btn = QPushButton("✕")
-        close_btn.setFixedSize(28, 28)
+        close_btn.setFixedSize(26, 26)
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.setStyleSheet("""
             QPushButton {
                 background: transparent;
                 border: none;
-                font-size: 15px;
+                font-size: 14px;
                 color: #94A3B8;
+                padding: 0;
             }
             QPushButton:hover {
                 background-color: #EF4444;
                 color: white;
-                border-radius: 14px;
+                border-radius: 13px;
             }
         """)
         close_btn.clicked.connect(self.hide)
@@ -130,20 +132,22 @@ class QuickBar(QWidget):
         header.addWidget(close_btn)
         card_layout.addLayout(header)
 
-        # 2. Live Status Badge Card
+        # 2. Live Status & Diagnostics Badge
         status_box = QFrame()
         status_box.setStyleSheet("""
             QFrame {
                 background-color: #1E293B;
                 border: 1px solid #334155;
                 border-radius: 8px;
-                padding: 4px;
+                padding: 2px;
             }
         """)
-        status_box_layout = QHBoxLayout(status_box)
+        status_box_layout = QVBoxLayout(status_box)
         status_box_layout.setContentsMargins(10, 6, 10, 6)
+        status_box_layout.setSpacing(4)
 
-        self.char_tag = QLabel(f"🐾 当前: {cfg.get('character', 'dewey').capitalize()}")
+        row1 = QHBoxLayout()
+        self.char_tag = QLabel(f"🐾 当前: {cfg.get('character', 'sakura').capitalize()}")
         self.char_tag.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         self.char_tag.setStyleSheet("color: #38BDF8;")
 
@@ -151,14 +155,31 @@ class QuickBar(QWidget):
         self.status_chip.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         self.status_chip.setStyleSheet("color: #2ECC71; font-weight: bold;")
 
-        status_box_layout.addWidget(self.char_tag)
-        status_box_layout.addStretch()
-        status_box_layout.addWidget(self.status_chip)
+        row1.addWidget(self.char_tag)
+        row1.addStretch()
+        row1.addWidget(self.status_chip)
+        status_box_layout.addLayout(row1)
+
+        row2 = QHBoxLayout()
+        port = cfg.get("server_port", 8765)
+        api_tag = QLabel(f"🌐 API: 127.0.0.1:{port} [就绪]")
+        api_tag.setFont(QFont("Segoe UI", 9))
+        api_tag.setStyleSheet("color: #94A3B8;")
+
+        sync_tag = QLabel("⚡ IDE 实时联动")
+        sync_tag.setFont(QFont("Segoe UI", 9))
+        sync_tag.setStyleSheet("color: #A78BFA;")
+
+        row2.addWidget(api_tag)
+        row2.addStretch()
+        row2.addWidget(sync_tag)
+        status_box_layout.addLayout(row2)
+
         card_layout.addWidget(status_box)
 
-        # 3. State Triggers Grid (Large, crisp, high contrast)
-        state_label = QLabel("⚡ 状态切换 (AI 状态实时测试)")
-        state_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        # 3. State Triggers Grid (AI 状态实时切换)
+        state_label = QLabel("⚡ 状态切换 (实时反馈)")
+        state_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         state_label.setStyleSheet("color: #E2E8F0;")
         card_layout.addWidget(state_label)
 
@@ -179,36 +200,39 @@ class QuickBar(QWidget):
         for idx, (label, st, timeout, col) in enumerate(states):
             btn = QPushButton(label)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setFixedHeight(32)
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #1E293B;
                     color: #F8FAFC;
                     font-size: 11px;
                     font-weight: 600;
-                    padding: 8px 6px;
+                    padding: 4px 6px;
                     border: 1px solid #334155;
+                    border-radius: 6px;
                 }}
                 QPushButton:hover {{
                     border-color: {col};
                     color: {col};
+                    background-color: #273549;
                 }}
             """)
             btn.clicked.connect(lambda checked, s=st, t=timeout: self._trigger_state(s, t))
-            self._state_buttons[st] = btn
+            self._state_buttons[st] = (btn, col)
             r = idx // 2
             c = idx % 2
             state_grid.addWidget(btn, r, c)
 
         card_layout.addLayout(state_grid)
 
-        # 4. Character Switcher
+        # 4. Character Switcher (2 rows x 3 columns for spacious layout)
         char_label = QLabel("🐾 切换桌宠形象")
-        char_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        char_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         char_label.setStyleSheet("color: #E2E8F0;")
         card_layout.addWidget(char_label)
 
-        char_row = QHBoxLayout()
-        char_row.setSpacing(6)
+        char_grid = QGridLayout()
+        char_grid.setSpacing(6)
         char_emojis = {
             "sakura": "🌸 樱子",
             "dewey": "🦆 鸭鸭",
@@ -217,42 +241,95 @@ class QuickBar(QWidget):
             "neko": "🐱 猫猫",
             "slime": "🍮 史莱姆"
         }
-        for char_info in list_characters():
+        for idx, char_info in enumerate(list_characters()):
             cid = char_info["id"]
             name = char_emojis.get(cid, cid)
             btn = QPushButton(name)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setFixedHeight(28)
             btn.setStyleSheet("""
                 QPushButton {
+                    background-color: #1E293B;
+                    color: #CBD5E1;
                     font-size: 11px;
                     font-weight: bold;
-                    padding: 6px 4px;
+                    padding: 4px;
+                    border: 1px solid #334155;
+                    border-radius: 6px;
+                }
+                QPushButton:hover {
+                    border-color: #00F0FF;
+                    color: #FFFFFF;
                 }
             """)
             btn.clicked.connect(lambda checked, name=cid: self._switch_character(name))
             self._char_buttons[cid] = btn
-            char_row.addWidget(btn)
-        card_layout.addLayout(char_row)
+            r = idx // 3
+            c = idx % 3
+            char_grid.addWidget(btn, r, c)
+        card_layout.addLayout(char_grid)
 
-        # 5. Speech Bubble & Quick Broadcast Input
+        # 5. Quick Real Actions (Real interactions instead of fake presets)
+        action_label = QLabel("🎮 快捷控制")
+        action_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        action_label.setStyleSheet("color: #E2E8F0;")
+        card_layout.addWidget(action_label)
+
+        act_layout = QHBoxLayout()
+        act_layout.setSpacing(6)
+
+        wake_btn = QPushButton("☀️ 唤醒")
+        wake_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        wake_btn.setFixedHeight(28)
+        wake_btn.setToolTip("唤醒桌宠并切换至待机状态")
+        wake_btn.clicked.connect(self._on_wake_clicked)
+
+        sleep_btn = QPushButton("💤 休眠")
+        sleep_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        sleep_btn.setFixedHeight(28)
+        sleep_btn.setToolTip("让桌宠立即进入休眠省电状态")
+        sleep_btn.clicked.connect(self._on_sleep_clicked)
+
+        poke_btn = QPushButton("💖 戳戳")
+        poke_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        poke_btn.setFixedHeight(28)
+        poke_btn.setToolTip("与桌宠互动戳一戳")
+        poke_btn.clicked.connect(self._on_poke_clicked)
+
+        reset_btn = QPushButton("🔄 归位")
+        reset_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        reset_btn.setFixedHeight(28)
+        reset_btn.setToolTip("重置桌宠到屏幕右下角默认位置")
+        reset_btn.clicked.connect(self._on_reset_clicked)
+
+        act_layout.addWidget(wake_btn)
+        act_layout.addWidget(sleep_btn)
+        act_layout.addWidget(poke_btn)
+        act_layout.addWidget(reset_btn)
+        card_layout.addLayout(act_layout)
+
+        # 6. Speech Bubble Broadcast Input
         say_label = QLabel("💬 对话气泡广播")
-        say_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        say_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         say_label.setStyleSheet("color: #E2E8F0;")
         card_layout.addWidget(say_label)
 
         say_layout = QHBoxLayout()
+        say_layout.setSpacing(6)
         self.say_input = QLineEdit()
-        self.say_input.setPlaceholderText("输入让桌宠说的话，按回车发送...")
+        self.say_input.setPlaceholderText("输入台词广播给桌宠，按回车发送...")
         self.say_input.returnPressed.connect(self._send_say)
 
         say_btn = QPushButton("发送")
         say_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        say_btn.setFixedWidth(60)
+        say_btn.setFixedWidth(56)
+        say_btn.setFixedHeight(30)
         say_btn.setStyleSheet("""
             QPushButton {
                 background-color: #0284C7;
                 border-color: #38BDF8;
                 font-weight: bold;
+                color: #FFFFFF;
             }
             QPushButton:hover {
                 background-color: #0369A1;
@@ -264,64 +341,39 @@ class QuickBar(QWidget):
         say_layout.addWidget(say_btn)
         card_layout.addLayout(say_layout)
 
-        # Presets row
-        preset_row = QHBoxLayout()
-        preset_row.setSpacing(6)
-        presets = [
-            ("🚀 开始构建", "正在编译核心模块中..."),
-            ("✅ 测试全过", "所有 42 项单元测试通过！🎉"),
-            ("🍵 喝水休息", "写代码辛苦啦，起来活动活动吧~"),
-            ("🐛 发现Bug", "发现 1 处空指针异常，正在排查！")
-        ]
-        for tag, text in presets:
-            btn = QPushButton(tag)
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setStyleSheet("font-size: 10px; padding: 4px 6px; color: #94A3B8;")
-            btn.clicked.connect(lambda checked, t=text: self.say_requested.emit(t, "info"))
-            preset_row.addWidget(btn)
-        card_layout.addLayout(preset_row)
-
-        # 6. Pomodoro Focus Clock
-        pomo_layout = QHBoxLayout()
-        self.pomo_btn = QPushButton("🍅 开启 25 分钟专注工作")
-        self.pomo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.pomo_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #D97706;
-                border-color: #F59E0B;
-                color: #FFFFFF;
-                font-weight: bold;
-                padding: 8px 12px;
-            }
-            QPushButton:hover {
-                background-color: #B45309;
-            }
-        """)
-        self.pomo_btn.clicked.connect(self._toggle_pomodoro)
-        pomo_layout.addWidget(self.pomo_btn)
-        card_layout.addLayout(pomo_layout)
-
-        # 7. Preferences: Scale, Sound, Top, Pill Toggle
+        # 7. Preferences: Sound, Top, Pill, Scale
         pref_row = QHBoxLayout()
         pref_row.setSpacing(6)
 
         sound_val = cfg.get("sound_enabled", True)
-        sound_btn = QPushButton("🔊 音效: 开" if sound_val else "🔇 音效: 关")
-        sound_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        sound_btn.clicked.connect(lambda: self._toggle_sound(sound_btn))
+        self.sound_btn = QPushButton("🔊 音效: 开" if sound_val else "🔇 音效: 关")
+        self.sound_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.sound_btn.setFixedHeight(28)
+        self.sound_btn.clicked.connect(lambda: self._toggle_sound(self.sound_btn))
 
         top_val = cfg.get("always_on_top", True)
-        top_btn = QPushButton("📌 置顶: 开" if top_val else "置顶: 关")
-        top_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        top_btn.clicked.connect(lambda: self._toggle_top(top_btn))
+        self.top_btn = QPushButton("📌 置顶: 开" if top_val else "置顶: 关")
+        self.top_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.top_btn.setFixedHeight(28)
+        self.top_btn.clicked.connect(lambda: self._toggle_top(self.top_btn))
 
-        pill_btn = QPushButton("🏷️ 状态胶囊")
-        pill_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        pill_btn.clicked.connect(lambda: self.status_pill_toggled.emit(True))
+        self.pill_btn = QPushButton("🏷️ 胶囊")
+        self.pill_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.pill_btn.setFixedHeight(28)
+        self.pill_btn.clicked.connect(lambda: self.status_pill_toggled.emit(True))
 
-        pref_row.addWidget(sound_btn)
-        pref_row.addWidget(top_btn)
-        pref_row.addWidget(pill_btn)
+        curr_scale = float(cfg.get("scale", 2.0))
+        self.scale_btn = QPushButton(f"📏 {curr_scale:.1f}x")
+        self.scale_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.scale_btn.setFixedHeight(28)
+        self.scale_btn.setFixedWidth(64)
+        self.scale_btn.setToolTip("点击循环切换尺寸: 1.5x -> 2.0x -> 2.5x -> 3.0x")
+        self.scale_btn.clicked.connect(self._cycle_scale)
+
+        pref_row.addWidget(self.sound_btn)
+        pref_row.addWidget(self.top_btn)
+        pref_row.addWidget(self.pill_btn)
+        pref_row.addWidget(self.scale_btn)
         card_layout.addLayout(pref_row)
 
         main_layout.addWidget(card)
@@ -343,9 +395,86 @@ class QuickBar(QWidget):
     def _switch_character(self, name: str):
         sound_player.play("click")
         self.character_changed.emit(name)
+        self.update_character_ui(name)
+
+    def update_character_ui(self, name: str):
         char = get_character(name)
         self.char_tag.setText(f"🐾 当前: {char.display_name}")
-        self.say_requested.emit(f"已切换为 {char.display_name}！", "info")
+        for cid, btn in self._char_buttons.items():
+            if cid == char.name:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #0F766E;
+                        border: 1.5px solid #00F0FF;
+                        color: #FFFFFF;
+                        font-size: 11px;
+                        font-weight: bold;
+                        border-radius: 6px;
+                        padding: 4px;
+                    }
+                """)
+            else:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #1E293B;
+                        border: 1px solid #334155;
+                        color: #94A3B8;
+                        font-size: 11px;
+                        font-weight: bold;
+                        border-radius: 6px;
+                        padding: 4px;
+                    }
+                    QPushButton:hover {
+                        border-color: #00F0FF;
+                        color: #FFFFFF;
+                    }
+                """)
+
+    def update_state_ui(self, new_state: PetState):
+        info = {
+            PetState.IDLE: ("#2ECC71", "● 待机中"),
+            PetState.THINKING: ("#F1C40F", "● 思考中"),
+            PetState.WORKING: ("#00F0FF", "● 编码中"),
+            PetState.DONE: ("#2ECC71", "● 任务完成"),
+            PetState.ERROR: ("#FF7675", "● 遇到错误"),
+            PetState.WAITING: ("#E67E22", "● 等待确认"),
+            PetState.CLICKED: ("#E84393", "● 互动中"),
+            PetState.SLEEP: ("#7F8C8D", "● 休眠中")
+        }
+        col, text = info.get(new_state, ("#00F0FF", "● 正常"))
+        self.status_chip.setText(text)
+        self.status_chip.setStyleSheet(f"color: {col}; font-weight: bold;")
+
+        for st, (btn, c) in self._state_buttons.items():
+            if st == new_state:
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: #1E3A5F;
+                        border: 1.5px solid {c};
+                        color: {c};
+                        font-size: 11px;
+                        font-weight: bold;
+                        border-radius: 6px;
+                        padding: 4px 6px;
+                    }}
+                """)
+            else:
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: #1E293B;
+                        border: 1px solid #334155;
+                        color: #E2E8F0;
+                        font-size: 11px;
+                        font-weight: 600;
+                        border-radius: 6px;
+                        padding: 4px 6px;
+                    }}
+                    QPushButton:hover {{
+                        border-color: {c};
+                        color: {c};
+                        background-color: #273549;
+                    }}
+                """)
 
     def _send_say(self):
         text = self.say_input.text().strip()
@@ -354,35 +483,35 @@ class QuickBar(QWidget):
             self.say_requested.emit(text, "info")
             self.say_input.clear()
 
-    def _toggle_pomodoro(self):
-        if not self.pomodoro_active:
-            self.pomodoro_active = True
-            self.pomodoro_seconds_left = self.pomodoro_total_seconds
-            self.pomodoro_timer.start(1000)
-            self.pomo_btn.setText(f"🍅 专注中 (25:00) - 点击取消")
-            self.state_machine.set_state(PetState.WORKING)
-            self.say_requested.emit("开始 25 分钟专注！桌宠全力陪你写代码~", "working")
-            sound_player.play("done")
-        else:
-            self.pomodoro_active = False
-            self.pomodoro_timer.stop()
-            self.pomo_btn.setText("🍅 开启 25 分钟专注工作")
-            self.state_machine.set_state(PetState.IDLE)
-            self.say_requested.emit("专注已暂停，随时准备继续！", "info")
+    def _on_wake_clicked(self):
+        sound_player.play("click")
+        self.wake_requested.emit()
 
-    def _on_pomodoro_tick(self):
-        if self.pomodoro_seconds_left > 0:
-            self.pomodoro_seconds_left -= 1
-            m = self.pomodoro_seconds_left // 60
-            s = self.pomodoro_seconds_left % 60
-            self.pomo_btn.setText(f"🍅 专注中 ({m:02d}:{s:02d}) - 点击取消")
-        else:
-            self.pomodoro_active = False
-            self.pomodoro_timer.stop()
-            self.pomo_btn.setText("🍅 开启 25 分钟专注工作")
-            self.state_machine.set_state(PetState.DONE, timeout_sec=6.0)
-            self.say_requested.emit("🎉 专注时间结束！太棒啦，起来喝杯水吧！", "success")
-            sound_player.play("done")
+    def _on_sleep_clicked(self):
+        sound_player.play("click")
+        self.sleep_requested.emit()
+
+    def _on_poke_clicked(self):
+        sound_player.play("click")
+        self.interaction_requested.emit()
+
+    def _on_reset_clicked(self):
+        sound_player.play("click")
+        self.reset_position_requested.emit()
+
+    def _cycle_scale(self):
+        curr = float(cfg.get("scale", 2.0))
+        scale_steps = [1.5, 2.0, 2.5, 3.0]
+        try:
+            # find closest
+            idx = min(range(len(scale_steps)), key=lambda i: abs(scale_steps[i] - curr))
+            new_scale = scale_steps[(idx + 1) % len(scale_steps)]
+        except Exception:
+            new_scale = 2.0
+        cfg.set("scale", new_scale)
+        self.scale_btn.setText(f"📏 {new_scale:.1f}x")
+        self.scale_changed.emit(new_scale)
+        sound_player.play("click")
 
     def _toggle_sound(self, btn: QPushButton):
         curr = cfg.get("sound_enabled", True)
@@ -399,16 +528,4 @@ class QuickBar(QWidget):
         btn.setText("📌 置顶: 开" if new_val else "置顶: 关")
 
     def _on_state_updated(self, old_state: PetState, new_state: PetState):
-        info = {
-            PetState.IDLE: ("#2ECC71", "● 待机中"),
-            PetState.THINKING: ("#F1C40F", "● 思考中"),
-            PetState.WORKING: ("#00F0FF", "● 编码中"),
-            PetState.DONE: ("#2ECC71", "● 任务完成"),
-            PetState.ERROR: ("#FF7675", "● 遇到错误"),
-            PetState.WAITING: ("#E67E22", "● 等待确认"),
-            PetState.CLICKED: ("#E84393", "● 互动中"),
-            PetState.SLEEP: ("#7F8C8D", "● 休眠中")
-        }
-        col, text = info.get(new_state, ("#00F0FF", "● 正常"))
-        self.status_chip.setText(text)
-        self.status_chip.setStyleSheet(f"color: {col}; font-weight: bold;")
+        self.update_state_ui(new_state)

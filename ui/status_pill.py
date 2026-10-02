@@ -1,7 +1,7 @@
 """Floating Status Pill / Capsule attached below the pet."""
 from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QFrame
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QGuiApplication
 from engine.pet_state import PetState, StateMachine
 
 class StatusPill(QWidget):
@@ -65,6 +65,10 @@ class StatusPill(QWidget):
         self.update_state(new_state)
 
     def follow_pet(self, pet_pos: QPoint, pet_width: int, pet_height: int):
+        screen = QGuiApplication.primaryScreen().availableGeometry()
         x = pet_pos.x() + (pet_width - self.width()) // 2
         y = pet_pos.y() + pet_height + 2
+        if y + self.height() > screen.bottom():
+            y = pet_pos.y() - self.height() - 2
+        x = max(screen.left() + 4, min(x, screen.right() - self.width() - 4))
         self.move(x, y)

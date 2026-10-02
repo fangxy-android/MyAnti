@@ -55,24 +55,47 @@ class PetWindow(QWidget):
 
         # Quick control drawer
         self.quick_bar = QuickBar(self.state_machine)
-        self.quick_bar.character_changed.connect(self._on_character_changed)
+        self.quick_bar.character_changed.connect(lambda name: self._on_character_changed(name, announce=False))
         self.quick_bar.say_requested.connect(self.say)
         self.quick_bar.status_pill_toggled.connect(self._toggle_pill)
+        self.quick_bar.scale_changed.connect(self.set_scale)
+        self.quick_bar.reset_position_requested.connect(self._reset_position)
+        self.quick_bar.wake_requested.connect(self._wake_pet)
+        self.quick_bar.sleep_requested.connect(self._sleep_pet)
+        self.quick_bar.interaction_requested.connect(self._handle_pet_click)
 
     def _restore_position(self):
         screen = QGuiApplication.primaryScreen().availableGeometry()
         saved_x = cfg.get("window_x", -1)
         saved_y = cfg.get("window_y", -1)
 
-        if saved_x >= 0 and saved_y >= 0:
+        if saved_x >= 0 and saved_y >= 0 and saved_x < screen.right() - 20 and saved_y < screen.bottom() - 20:
             self.move(saved_x, saved_y)
         else:
-            # Default to bottom right near taskbar
-            default_x = screen.width() - self.width() - 80
-            default_y = screen.height() - self.height() - 70
-            self.move(default_x, default_y)
+            self._reset_position(announce=False)
 
         self.pill.follow_pet(self.pos(), self.width(), self.height())
+
+    def _reset_position(self, announce: bool = True):
+        screen = QGuiApplication.primaryScreen().availableGeometry()
+        default_x = screen.right() - self.width() - 80
+        default_y = screen.bottom() - self.height() - 70
+        self.move(default_x, default_y)
+        cfg.set("window_x", default_x)
+        cfg.set("window_y", default_y)
+        self.pill.follow_pet(self.pos(), self.width(), self.height())
+        if announce:
+            self.say("已重置到屏幕右下角~ 🌸", "info", 2.5)
+
+    def _wake_pet(self):
+        self.state_machine.set_state(PetState.IDLE)
+        sound_player.play("notify")
+        self.say("呼...醒来啦！今天要做什么？✨", "info", 3.0)
+
+    def _sleep_pet(self):
+        self.state_machine.set_state(PetState.SLEEP)
+        sound_player.play("click")
+        self.say("Zzz... 桌宠进入休眠省电中~ 💤", "info", 3.0)
 
     def say(self, message: str, mood: str = "info", duration_sec: float = None):
         pet_top_center = QPoint(self.x() + self.width() // 2, self.y())
@@ -110,16 +133,23 @@ class PetWindow(QWidget):
         elif new_state == PetState.WAITING:
             sound_player.play("notify")
 
-    def _on_character_changed(self, character_name: str):
+    def _on_character_changed(self, character_name: str, announce: bool = True):
         self.anim_engine.set_character(character_name)
         size = self.anim_engine.pet_size
         self.setFixedSize(size, size)
+        self.pill.follow_pet(self.pos(), self.width(), self.height())
+        self.quick_bar.update_character_ui(character_name)
+        char = self.anim_engine.current_character
+        if announce:
+            self.say(f"已切换为 {char.display_name}！✨", "info", 3.0)
+        sound_player.play("click")
         self.update()
 
     def set_scale(self, scale: float):
         self.anim_engine.set_scale(scale)
         size = self.anim_engine.pet_size
         self.setFixedSize(size, size)
+        self.pill.follow_pet(self.pos(), self.width(), self.height())
         self.update()
 
     def mousePressEvent(self, event):
@@ -131,8 +161,12 @@ class PetWindow(QWidget):
 
     def mouseMoveEvent(self, event):
         if self._dragging:
+            screen = QGuiApplication.primaryScreen().availableGeometry()
             new_pos = event.globalPosition().toPoint() - self._drag_start_pos
-            self.move(new_pos)
+            # Clamp position within screen bounds with slight margin
+            nx = max(screen.left() - self.width() // 2, min(new_pos.x(), screen.right() - self.width() // 2))
+            ny = max(screen.top(), min(new_pos.y(), screen.bottom() - self.height() // 2))
+            self.move(nx, ny)
             self.pill.follow_pet(self.pos(), self.width(), self.height())
             # Sync speech bubble if visible
             if self.bubble.isVisible():
@@ -160,7 +194,7 @@ class PetWindow(QWidget):
         curr = self.state_machine.current_state
         if curr == PetState.SLEEP:
             self.state_machine.set_state(PetState.IDLE)
-            self.say("呼...醒来啦！今天要做什么？", "info", 3.0)
+            self.say("呼...醒来啦！今天要做什么？✨", "info", 3.0)
         elif curr == PetState.IDLE:
             self.state_machine.set_state(PetState.CLICKED, timeout_sec=2.0)
             self.say("✨ (咕噜噜~ 正在为你加油！)", "info", 2.5)
@@ -172,12 +206,17 @@ class PetWindow(QWidget):
             # Position quick bar beside the pet
             screen = QGuiApplication.primaryScreen().availableGeometry()
             bx = self.x() + self.width() + 12
-            if bx + self.quick_bar.width() > screen.width():
+            if bx + self.quick_bar.width() > screen.right():
                 bx = self.x() - self.quick_bar.width() - 12
-            by = min(self.y(), screen.height() - self.quick_bar.height() - 20)
-            by = max(20, by)
+            bx = max(screen.left() + 10, bx)
+            by = min(self.y(), screen.bottom() - self.quick_bar.height() - 10)
+            by = max(screen.top() + 10, by)
             self.quick_bar.move(bx, by)
+            self.quick_bar.update_character_ui(self.anim_engine.current_character.name)
+            self.quick_bar.update_state_ui(self.state_machine.current_state)
             self.quick_bar.show()
+            self.quick_bar.raise_()
+            self.quick_bar.activateWindow()
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
@@ -213,12 +252,12 @@ class PetWindow(QWidget):
 
         # Character sub-menu
         char_menu = menu.addMenu("🐾 切换形象")
-        current_char_id = cfg.get("character", "dewey")
+        current_char_id = self.anim_engine.current_character.name
         for char_info in list_characters():
             act = char_menu.addAction(char_info["display_name"])
             act.setCheckable(True)
             act.setChecked(char_info["id"] == current_char_id)
-            act.triggered.connect(lambda checked, name=char_info["id"]: self._on_character_changed(name))
+            act.triggered.connect(lambda checked, name=char_info["id"]: self._on_character_changed(name, announce=True))
 
         # State test sub-menu
         state_menu = menu.addMenu("⚡ 状态测试")

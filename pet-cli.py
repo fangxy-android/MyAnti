@@ -4,7 +4,8 @@
 Usage:
   python pet-cli.py <state> [message] [--timeout SECONDS] [--mood MOOD]
   python pet-cli.py say <message> [--mood MOOD]
-  python pet-cli.py char <character_name>
+  python pet-cli.py char <sakura|dewey|fireball|codebot|neko|slime>
+  python pet-cli.py <wake|sleep|poke|reset|console>
   python pet-cli.py status
 
 Examples:
@@ -14,7 +15,10 @@ Examples:
   python pet-cli.py thinking "Analyzing codebase..."
   python pet-cli.py waiting "Waiting for user confirmation..."
   python pet-cli.py say "Take a 5-minute break!"
-  python pet-cli.py char dewey
+  python pet-cli.py char sakura
+  python pet-cli.py wake
+  python pet-cli.py sleep
+  python pet-cli.py reset
 """
 
 import sys
@@ -77,11 +81,24 @@ def main():
 
     if cmd in ("char", "character"):
         if len(sys.argv) < 3:
-            print("Usage: python pet-cli.py char <dewey|fireball|codebot|neko|slime>")
+            print("Usage: python pet-cli.py char <sakura|dewey|fireball|codebot|neko|slime>")
             return
         name = sys.argv[2].lower()
         res = post_json("/api/character", {"character": name})
-        print(f"[pet-cli] Switched character to: {name}")
+        cname = res.get("display_name", name)
+        print(f"[pet-cli] Switched character to: {name} ({cname})")
+        return
+
+    if cmd in ("wake", "sleep", "poke", "click", "reset", "reset_pos", "console", "bar", "quick_bar"):
+        act_map = {
+            "poke": "click",
+            "reset_pos": "reset",
+            "bar": "quick_bar",
+            "console": "quick_bar"
+        }
+        action = act_map.get(cmd, cmd)
+        res = post_json("/api/action", {"action": action})
+        print(f"[pet-cli] Triggered action: {action}")
         return
 
     # Treat as state

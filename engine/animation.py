@@ -3,13 +3,14 @@ from PySide6.QtCore import QObject, Signal, QTimer
 from PySide6.QtGui import QPixmap
 from engine.pet_state import PetState, StateMachine
 from graphics.characters.base import CharacterBase
+from graphics.characters import get_character
 from config import cfg
 
 class AnimationEngine(QObject):
     frame_changed = Signal(QPixmap)
+    character_changed = Signal(str)
 
     def __init__(self, state_machine: StateMachine):
-        from graphics.characters import get_character
         super().__init__()
         self.state_machine = state_machine
         self.current_character: CharacterBase = get_character(cfg.get("character", "sakura"))
@@ -35,7 +36,11 @@ class AnimationEngine(QObject):
         if char:
             self.current_character = char
             cfg.set("character", char.name)
+            self.frame_index = 0
+            duration = self.current_character.get_frame_duration(self.state_machine.current_state)
+            self.timer.setInterval(duration)
             self._refresh_frames()
+            self.character_changed.emit(char.name)
 
     def set_scale(self, scale: float):
         self.scale = max(1.0, min(4.0, scale))

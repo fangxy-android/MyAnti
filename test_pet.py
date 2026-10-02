@@ -59,7 +59,11 @@ def run_tests():
     from engine.animation import AnimationEngine
     ae = AnimationEngine(sm)
     assert ae.pet_size > 0
-    print("✅ Animation Engine test passed.")
+    # Test switching to every registered character
+    for cid in REGISTRY.keys():
+        ae.set_character(cid)
+        assert ae.current_character.name == cid, f"AnimationEngine failed switching to {cid}"
+    print("✅ Animation Engine character switching test passed.")
 
     # 6. UI & Server Components Test
     from ui.pet_window import PetWindow
@@ -72,13 +76,48 @@ def run_tests():
     assert pw.bubble is not None
     assert pw.quick_bar is not None
 
+    # Test character switching on PetWindow
+    for cid in REGISTRY.keys():
+        pw._on_character_changed(cid, announce=False)
+        assert ae.current_character.name == cid
+        assert pw.quick_bar.char_tag.text().find(ae.current_character.display_name) >= 0
+
+    # Test real actions on PetWindow
+    pw._wake_pet()
+    assert sm.current_state == PetState.IDLE
+    pw._sleep_pet()
+    assert sm.current_state == PetState.SLEEP
+    pw._reset_position(announce=False)
+    pw._handle_pet_click()
+
+    # Test QuickBar UI updates
+    pw.quick_bar.update_state_ui(PetState.WORKING)
+    assert pw.quick_bar.status_chip.text() == "● 编码中"
+    pw.quick_bar.update_character_ui("dewey")
+    assert "Dewey" in pw.quick_bar.char_tag.text()
+
     tray = TrayIcon(pw)
     assert tray is not None
 
     server = PetHttpServer(sm, pw, port=8769)
     server.start()
+
+    import urllib.request
+    import json
+    # Test character switch over HTTP
+    req = urllib.request.Request("http://127.0.0.1:8769/api/character", data=b'{"character":"neko"}', headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=2.0) as resp:
+        res = json.loads(resp.read().decode())
+        assert res.get("character") == "neko"
+
+    # Test action over HTTP
+    req = urllib.request.Request("http://127.0.0.1:8769/api/action", data=b'{"action":"wake"}', headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=2.0) as resp:
+        res = json.loads(resp.read().decode())
+        assert res.get("action") == "wake"
+
     server.stop()
-    print("✅ UI, Tray, and Server tests passed.")
+    print("✅ UI, Tray, QuickBar, and Server tests passed.")
 
     print("\n🎉 ALL TESTS PASSED SUCCESSFULLY! Ready for launch.")
 

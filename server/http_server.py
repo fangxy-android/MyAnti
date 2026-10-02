@@ -77,10 +77,16 @@ class PetRequestHandler(BaseHTTPRequestHandler):
             self._send_json_response(200, {"success": True, "message": message})
 
         elif self.path == "/api/character":
-            char_name = payload.get("character", payload.get("name", "dewey"))
+            char_name = payload.get("character", payload.get("name", "sakura"))
+            from graphics.characters import get_character
+            resolved_char = get_character(char_name)
             if self.bridge:
-                self.bridge.character_requested.emit(char_name)
-            self._send_json_response(200, {"success": True, "character": char_name})
+                self.bridge.character_requested.emit(resolved_char.name)
+            self._send_json_response(200, {
+                "success": True,
+                "character": resolved_char.name,
+                "display_name": resolved_char.display_name
+            })
 
         elif self.path == "/api/action":
             action = payload.get("action", "click")
@@ -120,6 +126,7 @@ class PetHttpServer:
         BoundHandler.pet_window = self.pet_window
 
         try:
+            HTTPServer.allow_reuse_address = False
             self._server = HTTPServer(("127.0.0.1", self.port), BoundHandler)
             self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
             self._thread.start()
@@ -142,14 +149,17 @@ class PetHttpServer:
         self.pet_window.say(message, mood=mood, duration_sec=duration)
 
     def _on_character_requested(self, char_name: str):
-        self.pet_window._on_character_changed(char_name)
+        self.pet_window._on_character_changed(char_name, announce=True)
 
     def _on_action_requested(self, action: str):
-        if action == "click":
+        act = str(action).lower().strip()
+        if act in ("click", "poke"):
             self.pet_window._handle_pet_click()
-        elif action == "wake":
-            self.state_machine.set_state(PetState.IDLE)
-        elif action == "sleep":
-            self.state_machine.set_state(PetState.SLEEP)
-        elif action == "quick_bar":
+        elif act == "wake":
+            self.pet_window._wake_pet()
+        elif act == "sleep":
+            self.pet_window._sleep_pet()
+        elif act in ("reset", "reset_pos"):
+            self.pet_window._reset_position()
+        elif act in ("quick_bar", "console", "bar"):
             self.pet_window.toggle_quick_bar()

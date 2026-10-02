@@ -16,8 +16,22 @@ REGISTRY: dict[str, CharacterBase] = {
     "slime": SlimeCharacter()
 }
 
+ALIASES: dict[str, str] = {
+    "duck": "dewey",
+    "cat": "neko",
+    "robot": "codebot",
+    "bot": "codebot",
+    "girl": "sakura",
+    "anime": "sakura",
+    "flame": "fireball",
+    "fire": "fireball",
+    "jelly": "slime"
+}
+
 def get_character(name: str) -> CharacterBase:
-    return REGISTRY.get(name.lower(), REGISTRY["dewey"])
+    key = str(name).lower().strip()
+    key = ALIASES.get(key, key)
+    return REGISTRY.get(key, REGISTRY.get("sakura", list(REGISTRY.values())[0]))
 
 def list_characters() -> list[dict]:
     return [
