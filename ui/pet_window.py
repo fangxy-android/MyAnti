@@ -101,19 +101,14 @@ class PetWindow(QWidget):
             sound_player.play("click")
         elif new_state == PetState.DONE:
             sound_player.play("done")
-            self.say("任务完成！全数通过 🎉", "success", 4.0)
         elif new_state == PetState.ERROR:
             sound_player.play("error")
-            self.say("发生错误，请检查！⚠️", "error", 4.0)
         elif new_state == PetState.THINKING:
             sound_player.play("bubble")
-            self.say("正在思考分析中... 💭", "info", 3.0)
         elif new_state == PetState.WORKING:
             sound_player.play("tick")
-            self.say("正在编写代码中... ⚡", "working", 3.0)
         elif new_state == PetState.WAITING:
             sound_player.play("notify")
-            self.say("等待你确认或输入哦~ 🔔", "warning", 4.0)
 
     def _on_character_changed(self, character_name: str):
         self.anim_engine.set_character(character_name)

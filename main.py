@@ -24,6 +24,8 @@ from ui.pet_window import PetWindow
 from ui.tray_icon import TrayIcon
 from server.http_server import PetHttpServer
 from server.monitor import SystemMonitor
+from server.antigravity_monitor import AntigravityMonitor
+
 
 def main():
     # Enable High DPI scaling
@@ -59,9 +61,12 @@ def main():
     # Initialize System Load & Auto-sleep Monitor
     monitor = SystemMonitor(state_machine)
 
+    # Initialize Antigravity IDE Real-time Conversation Auto-Sync
+    agy_monitor = AntigravityMonitor(state_machine, pet_window=pet_window)
+
     # Welcome greeting after UI renders
     def on_ready():
-        char_name = cfg.get("character", "dewey")
+        char_name = cfg.get("character", "sakura")
         sound_player.play("notify")
         pet_window.say("✨ Codex 桌宠就绪！点击互动，双击打开控制台~", "info", 4.5)
 
