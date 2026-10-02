@@ -4,31 +4,18 @@ from engine.pet_state import PetState
 from graphics.characters.base import CharacterBase
 from graphics.pixel_canvas import PixelCanvas
 
+from graphics.renderer import CrispRenderer
+
 class CodeBotCharacter(CharacterBase):
     name = "codebot"
     display_name = "赛博机人 CodeBot"
     description = "复古CRT显示器机器人，用像素脸表达各种编程状态！"
 
     def render_frames(self, state: PetState, target_size: int = 128) -> list[QPixmap]:
-        frames = []
-        if state == PetState.WORKING:
-            frames = self._render_working()
-        elif state == PetState.THINKING:
-            frames = self._render_thinking()
-        elif state == PetState.DONE:
-            frames = self._render_done()
-        elif state == PetState.ERROR:
-            frames = self._render_error()
-        elif state == PetState.WAITING:
-            frames = self._render_waiting()
-        elif state == PetState.CLICKED:
-            frames = self._render_clicked()
-        elif state == PetState.SLEEP:
-            frames = self._render_sleep()
-        else: # IDLE
-            frames = self._render_idle()
-
-        return [canvas.to_pixmap(target_size) for canvas in frames]
+        return [
+            CrispRenderer.render_codebot(state, i, target_size)
+            for i in range(4)
+        ]
 
     def _draw_robot_body(self, canvas: PixelCanvas, ox: int, oy: int, antenna_blink: bool = False):
         c_body = "#34495E"

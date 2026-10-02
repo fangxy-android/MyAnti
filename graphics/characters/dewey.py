@@ -5,31 +5,18 @@ from engine.pet_state import PetState
 from graphics.characters.base import CharacterBase
 from graphics.pixel_canvas import PixelCanvas
 
+from graphics.renderer import CrispRenderer
+
 class DeweyCharacter(CharacterBase):
     name = "dewey"
     display_name = "整理鸭 Dewey"
     description = "Codex经典桌宠！戴着小绿帽、充满活力的编程鸭子"
 
     def render_frames(self, state: PetState, target_size: int = 128) -> list[QPixmap]:
-        frames = []
-        if state == PetState.WORKING:
-            frames = self._render_working()
-        elif state == PetState.THINKING:
-            frames = self._render_thinking()
-        elif state == PetState.DONE:
-            frames = self._render_done()
-        elif state == PetState.ERROR:
-            frames = self._render_error()
-        elif state == PetState.WAITING:
-            frames = self._render_waiting()
-        elif state == PetState.CLICKED:
-            frames = self._render_clicked()
-        elif state == PetState.SLEEP:
-            frames = self._render_sleep()
-        else: # IDLE
-            frames = self._render_idle()
-
-        return [canvas.to_pixmap(target_size) for canvas in frames]
+        return [
+            CrispRenderer.render_dewey(state, i, target_size)
+            for i in range(4)
+        ]
 
     def _draw_base_duck(self, canvas: PixelCanvas, ox: int, oy: int, blink: bool = False, eye_type: str = "normal"):
         # Colors

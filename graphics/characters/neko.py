@@ -4,31 +4,18 @@ from engine.pet_state import PetState
 from graphics.characters.base import CharacterBase
 from graphics.pixel_canvas import PixelCanvas
 
+from graphics.renderer import CrispRenderer
+
 class NekoCharacter(CharacterBase):
     name = "neko"
     display_name = "赛博猫猫 Neko"
     description = "敲键盘超快的黑白猫咪，灵动的尾巴和尖尖的耳朵！"
 
     def render_frames(self, state: PetState, target_size: int = 128) -> list[QPixmap]:
-        frames = []
-        if state == PetState.WORKING:
-            frames = self._render_working()
-        elif state == PetState.THINKING:
-            frames = self._render_thinking()
-        elif state == PetState.DONE:
-            frames = self._render_done()
-        elif state == PetState.ERROR:
-            frames = self._render_error()
-        elif state == PetState.WAITING:
-            frames = self._render_waiting()
-        elif state == PetState.CLICKED:
-            frames = self._render_clicked()
-        elif state == PetState.SLEEP:
-            frames = self._render_sleep()
-        else: # IDLE
-            frames = self._render_idle()
-
-        return [canvas.to_pixmap(target_size) for canvas in frames]
+        return [
+            CrispRenderer.render_neko(state, i, target_size)
+            for i in range(4)
+        ]
 
     def _draw_cat(self, canvas: PixelCanvas, ox: int, oy: int, tail_frame: int = 0,
                   eye_mode: str = "normal", blink: bool = False):

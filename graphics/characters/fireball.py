@@ -4,31 +4,18 @@ from engine.pet_state import PetState
 from graphics.characters.base import CharacterBase
 from graphics.pixel_canvas import PixelCanvas
 
+from graphics.renderer import CrispRenderer
+
 class FireballCharacter(CharacterBase):
     name = "fireball"
     display_name = "火焰精灵 Fireball"
     description = "Codex经典桌宠！燃烧着代码热情的火焰精灵"
 
     def render_frames(self, state: PetState, target_size: int = 128) -> list[QPixmap]:
-        frames = []
-        if state == PetState.WORKING:
-            frames = self._render_working()
-        elif state == PetState.THINKING:
-            frames = self._render_thinking()
-        elif state == PetState.DONE:
-            frames = self._render_done()
-        elif state == PetState.ERROR:
-            frames = self._render_error()
-        elif state == PetState.WAITING:
-            frames = self._render_waiting()
-        elif state == PetState.CLICKED:
-            frames = self._render_clicked()
-        elif state == PetState.SLEEP:
-            frames = self._render_sleep()
-        else: # IDLE
-            frames = self._render_idle()
-
-        return [canvas.to_pixmap(target_size) for canvas in frames]
+        return [
+            CrispRenderer.render_fireball(state, i, target_size)
+            for i in range(4)
+        ]
 
     def _draw_flame(self, canvas: PixelCanvas, ox: int, oy: int, tip_shift: int = 0,
                     palette: tuple = ("#D63031", "#E17055", "#F39C12", "#FFEAA7"),

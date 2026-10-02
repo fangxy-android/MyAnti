@@ -8,6 +8,7 @@ from engine.animation import AnimationEngine
 from engine.sound import sound_player
 from ui.speech_bubble import SpeechBubble
 from ui.quick_bar import QuickBar
+from ui.status_pill import StatusPill
 from graphics.characters import list_characters, get_character
 from config import cfg
 
@@ -47,10 +48,16 @@ class PetWindow(QWidget):
         # Speech bubble
         self.bubble = SpeechBubble()
 
+        # Status Pill (Clear high-definition status chip under the pet)
+        self.pill = StatusPill(self.state_machine)
+        if cfg.get("show_status_pill", True):
+            self.pill.show()
+
         # Quick control drawer
         self.quick_bar = QuickBar(self.state_machine)
         self.quick_bar.character_changed.connect(self._on_character_changed)
         self.quick_bar.say_requested.connect(self.say)
+        self.quick_bar.status_pill_toggled.connect(self._toggle_pill)
 
     def _restore_position(self):
         screen = QGuiApplication.primaryScreen().availableGeometry()
@@ -62,18 +69,31 @@ class PetWindow(QWidget):
         else:
             # Default to bottom right near taskbar
             default_x = screen.width() - self.width() - 80
-            default_y = screen.height() - self.height() - 60
+            default_y = screen.height() - self.height() - 70
             self.move(default_x, default_y)
+
+        self.pill.follow_pet(self.pos(), self.width(), self.height())
 
     def say(self, message: str, mood: str = "info", duration_sec: float = None):
         pet_top_center = QPoint(self.x() + self.width() // 2, self.y())
         self.bubble.show_message(message, mood=mood, duration_sec=duration_sec, target_pos=pet_top_center)
+
+    def _toggle_pill(self, *args):
+        curr = self.pill.isVisible()
+        new_val = not curr
+        cfg.set("show_status_pill", new_val)
+        if new_val:
+            self.pill.follow_pet(self.pos(), self.width(), self.height())
+            self.pill.show()
+        else:
+            self.pill.hide()
 
     def _on_frame_changed(self, pixmap: QPixmap):
         self.current_pixmap = pixmap
         size = self.anim_engine.pet_size
         if self.width() != size or self.height() != size:
             self.setFixedSize(size, size)
+            self.pill.follow_pet(self.pos(), self.width(), self.height())
         self.update()
 
     def _on_state_changed(self, old_state: PetState, new_state: PetState):
@@ -81,10 +101,19 @@ class PetWindow(QWidget):
             sound_player.play("click")
         elif new_state == PetState.DONE:
             sound_player.play("done")
+            self.say("任务完成！全数通过 🎉", "success", 4.0)
         elif new_state == PetState.ERROR:
             sound_player.play("error")
+            self.say("发生错误，请检查！⚠️", "error", 4.0)
         elif new_state == PetState.THINKING:
             sound_player.play("bubble")
+            self.say("正在思考分析中... 💭", "info", 3.0)
+        elif new_state == PetState.WORKING:
+            sound_player.play("tick")
+            self.say("正在编写代码中... ⚡", "working", 3.0)
+        elif new_state == PetState.WAITING:
+            sound_player.play("notify")
+            self.say("等待你确认或输入哦~ 🔔", "warning", 4.0)
 
     def _on_character_changed(self, character_name: str):
         self.anim_engine.set_character(character_name)
@@ -109,6 +138,7 @@ class PetWindow(QWidget):
         if self._dragging:
             new_pos = event.globalPosition().toPoint() - self._drag_start_pos
             self.move(new_pos)
+            self.pill.follow_pet(self.pos(), self.width(), self.height())
             # Sync speech bubble if visible
             if self.bubble.isVisible():
                 pet_top_center = QPoint(self.x() + self.width() // 2, self.y())
@@ -234,6 +264,12 @@ class PetWindow(QWidget):
         top_act.setChecked(cfg.get("always_on_top", True))
         top_act.triggered.connect(self._toggle_top)
 
+        # Status Pill toggle
+        pill_act = menu.addAction("🏷️ 显示状态胶囊标签")
+        pill_act.setCheckable(True)
+        pill_act.setChecked(self.pill.isVisible())
+        pill_act.triggered.connect(self._toggle_pill)
+
         menu.addSeparator()
 
         # Exit action
@@ -261,6 +297,8 @@ class PetWindow(QWidget):
     def paintEvent(self, event):
         if self.current_pixmap and not self.current_pixmap.isNull():
             painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
             # Center pixmap
             px = (self.width() - self.current_pixmap.width()) // 2
             py = (self.height() - self.current_pixmap.height()) // 2

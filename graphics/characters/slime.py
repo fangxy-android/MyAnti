@@ -4,31 +4,18 @@ from engine.pet_state import PetState
 from graphics.characters.base import CharacterBase
 from graphics.pixel_canvas import PixelCanvas
 
+from graphics.renderer import CrispRenderer
+
 class SlimeCharacter(CharacterBase):
     name = "slime"
     display_name = "果冻史莱姆 Slime"
     description = "Q弹可爱的青柠果冻史莱姆，伴随每一次操作软萌晃动！"
 
     def render_frames(self, state: PetState, target_size: int = 128) -> list[QPixmap]:
-        frames = []
-        if state == PetState.WORKING:
-            frames = self._render_working()
-        elif state == PetState.THINKING:
-            frames = self._render_thinking()
-        elif state == PetState.DONE:
-            frames = self._render_done()
-        elif state == PetState.ERROR:
-            frames = self._render_error()
-        elif state == PetState.WAITING:
-            frames = self._render_waiting()
-        elif state == PetState.CLICKED:
-            frames = self._render_clicked()
-        elif state == PetState.SLEEP:
-            frames = self._render_sleep()
-        else: # IDLE
-            frames = self._render_idle()
-
-        return [canvas.to_pixmap(target_size) for canvas in frames]
+        return [
+            CrispRenderer.render_slime(state, i, target_size)
+            for i in range(4)
+        ]
 
     def _draw_slime(self, canvas: PixelCanvas, ox: int, oy: int, squash_w: int = 0, squash_h: int = 0,
                     eye_mode: str = "normal"):
